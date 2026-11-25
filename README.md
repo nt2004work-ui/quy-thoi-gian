@@ -1,0 +1,30 @@
+# Quỹ thời gian
+
+Quản lý thời gian trong ngày: bấm giờ, tính lương theo giờ, việc phụ, năng suất mỗi ngày, kế hoạch tháng, lương thực nhận.
+Giao diện Cute Pop (cùng bảng màu với app thu chi), cài được như app (PWA), mở lại được khi mất mạng.
+Không cần build: `index.html` + Supabase.
+
+## Triển khai
+
+1. **Supabase**: tạo project mới, vào *SQL Editor*, dán toàn bộ `schema.sql` rồi chạy.
+2. **Khóa API**: *Project Settings > API*, chép `Project URL` và `anon public key` vào đầu thẻ `<script>` trong `index.html` (`SUPABASE_URL`, `SUPABASE_KEY`). Khóa `anon` được phép công khai vì dữ liệu đã có Row Level Security. Không dùng `service_role`.
+3. **Đăng nhập**: *Authentication > Providers > Email* đã bật sẵn. Muốn vào ngay không cần xác nhận email, tắt *Confirm email*.
+4. **GitHub**: đẩy cả thư mục lên một repo, *Settings > Pages*, nhánh `main`, thư mục `/ (root)`. Link dạng `https://<tên>.github.io/<repo>/`.
+5. **Supabase > Authentication > URL Configuration**: đặt *Site URL* là link GitHub Pages ở trên.
+6. **Cài lên điện thoại**: mở link bằng Chrome (Android) chọn *Cài đặt ứng dụng*, hoặc Safari (iPhone) chọn *Chia sẻ > Thêm vào MH chính*.
+
+## PWA và ngoại tuyến
+
+- `sw.js` lưu sẵn giao diện, font và thư viện Supabase (`vendor/`) nên app mở được khi không có mạng.
+- Mất mạng: xem được dữ liệu của lần tải gần nhất (lưu trong trình duyệt). **Thêm, sửa, xóa cần có mạng** và app sẽ báo rõ.
+- Đồng hồ bấm giờ lưu trên máy: đóng app vẫn chạy tiếp. Nếu bấm "Dừng" lúc mất mạng thì phiên chưa bị xóa, bấm lại khi có mạng.
+- Sau khi sửa `index.html` hoặc file nào trong `sw.js`, **đổi `VERSION` trong `sw.js`** (v1 -> v2) để máy người dùng nhận bản mới.
+- Muốn tạo lại icon: `node tools/gen-icons.mjs`. Chạy thử cục bộ: `node tools/serve.mjs` rồi mở http://localhost:5180 (service worker chỉ chạy trên localhost hoặc https).
+
+## Cách tính
+
+- Lương/giờ = lương tháng ÷ (ngày công × giờ/ngày).
+- Lương chính thực nhận = giờ việc chính × lương/giờ × (1 − % khấu trừ).
+- Việc phụ: tự nhập tiền nhận, không bị khấu trừ.
+- Tổng thực nhận = lương chính thực nhận + thu nhập việc phụ.
+- Năng suất ngày = (giờ chính + giờ phụ) ÷ giờ chuẩn mỗi ngày.
