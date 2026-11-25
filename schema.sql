@@ -40,3 +40,8 @@ create policy "own entries" on entries for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own plans" on plans for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Cấp quyền cho người đã đăng nhập. Project Supabase mới không còn tự cấp quyền cho bảng tạo trong SQL Editor.
+-- RLS ở trên vẫn đảm bảo mỗi người chỉ thấy dữ liệu của mình. Vai trò anon (chưa đăng nhập) không được cấp gì.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on settings, entries, plans to authenticated;

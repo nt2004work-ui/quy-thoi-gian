@@ -1,7 +1,7 @@
 // Service worker: lưu sẵn "vỏ" ứng dụng để mở được khi không có mạng.
 // KHÔNG lưu phản hồi của Supabase (dữ liệu luôn lấy mới từ máy chủ; bản đọc ngoại tuyến do app tự giữ).
 // Đổi số VERSION mỗi khi sửa file trong danh sách để máy người dùng tải bản mới.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'quy-thoi-gian-' + VERSION;
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './vendor/supabase.min.js',
