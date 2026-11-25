@@ -1,6 +1,6 @@
 # Quỹ thời gian
 
-Quản lý thời gian trong ngày: bấm giờ, tính lương theo giờ, việc phụ, năng suất mỗi ngày, kế hoạch tháng, lương thực nhận.
+Quản lý thời gian trong ngày: chấm công vào/ra, tính lương theo giờ, việc phụ, năng suất mỗi ngày, kế hoạch tháng, lương thực nhận.
 Giao diện Cute Pop (cùng bảng màu với app thu chi), cài được như app (PWA), mở lại được khi mất mạng.
 Không cần build: `index.html` + Supabase.
 
@@ -17,7 +17,7 @@ Không cần build: `index.html` + Supabase.
 
 - `sw.js` lưu sẵn giao diện, font và thư viện Supabase (`vendor/`) nên app mở được khi không có mạng.
 - Mất mạng: xem được dữ liệu của lần tải gần nhất (lưu trong trình duyệt). **Thêm, sửa, xóa cần có mạng** và app sẽ báo rõ.
-- Đồng hồ bấm giờ lưu trên máy: đóng app vẫn chạy tiếp. Nếu bấm "Dừng" lúc mất mạng thì phiên chưa bị xóa, bấm lại khi có mạng.
+- Chấm công: nhập ngày, giờ vào và giờ ra (nút "Bây giờ" điền giờ hiện tại); ra về sau nửa đêm vẫn tính đúng.
 - Sau khi sửa `index.html` hoặc file nào trong `sw.js`, **đổi `VERSION` trong `sw.js`** (v1 -> v2) để máy người dùng nhận bản mới.
 - Muốn tạo lại icon: `node tools/gen-icons.mjs`. Chạy thử cục bộ: `node tools/serve.mjs` rồi mở http://localhost:5180 (service worker chỉ chạy trên localhost hoặc https).
 

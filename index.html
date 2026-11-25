@@ -34,6 +34,7 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
 .wrap{max-width:760px;margin:0 auto;padding:16px 16px calc(var(--nav-h) + 28px + env(safe-area-inset-bottom))}
 header{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;padding-top:env(safe-area-inset-top)}
 .brand{display:flex;align-items:center;gap:10px}
@@ -43,7 +44,8 @@ h1{font-size:20px;margin:0;color:var(--blue-ink)}h2{font-size:16px;margin:0 0 12
 .card.tint-y{background:var(--yellow-tint);border-color:#F3E48A}
 .card.tint-p{background:var(--pink-tint)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
-label{display:flex;flex-direction:column;font-size:12px;font-weight:500;color:var(--muted);gap:4px;flex:1;min-width:110px}
+.row>label{min-width:130px}
+label{display:flex;flex-direction:column;font-size:12px;font-weight:500;color:var(--muted);gap:4px;flex:1;min-width:0}
 input,select{font:inherit;font-size:16px;padding:10px 12px;min-height:44px;border:1.5px solid var(--border-strong);border-radius:14px;background:#fff;color:var(--ink);width:100%}
 input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--green)}
 button{font:inherit;color:inherit}
@@ -52,7 +54,18 @@ button.b:active{transform:scale(.96)}
 button.b.g{background:#fff;color:var(--muted);border:1.5px solid var(--border-strong);font-weight:500}
 button.b.stop{background:var(--coral-strong)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--blue-ink);outline-offset:2px}
-.clk{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue-ink);line-height:1.2}
+/* Form: lưới 2 cột, không bao giờ rộng hơn màn hình */
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .wide,.form .act{grid-column:1/-1}.form .gap{display:none}
+.form label{min-width:0}
+.act{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pv{font-weight:700;color:var(--green-ink);font-size:14px}
+.now{align-self:flex-start;background:none;border:0;padding:6px 2px 0;color:var(--blue-ink);font-size:12px;font-weight:700;cursor:pointer;min-height:32px}
+/* Ô ngày/giờ/tháng trên iOS và Android hay rộng hơn khung: ép về đúng bề rộng */
+input[type=date],input[type=time],input[type=month]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;text-align:left;line-height:1.2}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
+input::-webkit-calendar-picker-indicator{margin:0 0 0 4px;flex:none}
+header input[type=month]{width:auto;min-width:150px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .k{font-size:12px;color:var(--muted)}.v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .money{color:var(--green-ink)}.big{font-size:30px}
@@ -110,7 +123,7 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).
 let user, tab = 'today', month = today().slice(0, 7), E = [], P = [], offline = false;
 let S = { monthly_salary: 0, work_days: 22, hours_per_day: 8, deduction_pct: 10 };
 const rate = () => S.monthly_salary / (S.work_days * S.hours_per_day) || 0;
-const timer = () => JSON.parse(localStorage.getItem('timer') || 'null');
+localStorage.removeItem('timer'); // dọn phiên bấm giờ của bản cũ
 
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
@@ -195,11 +208,23 @@ async function saveS() {
   if (n.work_days < 1 || n.hours_per_day < 1 || n.deduction_pct < 0 || n.deduction_pct > 100 || n.monthly_salary < 0) return toast('Kiểm tra lại các con số.');
   if (await write(() => sb.from('settings').upsert({ user_id: user.id, ...n }))) { S = n; toast('Đã lưu cài đặt.'); load(); }
 }
+// "HH:MM" -> phút trong ngày
+const toMin = v => { const p = String(v || '').split(':'); return p.length === 2 && p[0] !== '' && p[1] !== '' ? +p[0] * 60 + +p[1] : NaN; };
+// Số phút giữa giờ vào và giờ ra; ra về sau nửa đêm (ra < vào) thì cộng thêm 24 giờ.
+const span = (a, b) => { const x = toMin(a), y = toMin(b); return isNaN(x) || isNaN(y) ? NaN : (y - x + 1440) % 1440; };
+function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function setNow(id, kind) { $('#' + id).value = nowHM(); preview(kind); }
+function preview(kind) {
+  const m = span($('#in' + kind).value, $('#out' + kind).value), el = $('#pv' + kind);
+  if (el) el.textContent = m > 0 ? 'Làm ' + hm(m) + (kind === 'main' ? ' · ' + vnd(m / 60 * rate()) : '') : '';
+}
 async function add(kind) {
-  const t = $('#t' + kind).value.trim(), h = +$('#h' + kind).value, d = $('#d' + kind).value;
-  if (!t || !(h > 0) || !d) return toast('Nhập tên công việc, ngày và số giờ.');
-  const row = { kind, title: t, work_date: d, minutes: Math.max(1, Math.round(h * 60)), income: kind === 'side' ? +$('#i' + kind).value || 0 : null };
-  if (await write(() => sb.from('entries').insert(row))) { toast('Đã thêm.'); load(); }
+  const t = $('#t' + kind).value.trim() || (kind === 'main' ? 'Làm việc chính' : ''), d = $('#d' + kind).value;
+  const m = span($('#in' + kind).value, $('#out' + kind).value);
+  if (!t) return toast('Nhập tên công việc.');
+  if (!d || !(m > 0)) return toast('Nhập ngày, giờ vào và giờ ra.');
+  const row = { kind, title: t, work_date: d, minutes: m, income: kind === 'side' ? +$('#i' + kind).value || 0 : null };
+  if (await write(() => sb.from('entries').insert(row))) { toast('Đã lưu ' + hm(m) + '.'); load(); }
 }
 async function del(id) { if (await write(() => sb.from('entries').delete().eq('id', id))) load(); }
 async function addPlan() {
@@ -209,52 +234,28 @@ async function addPlan() {
 async function togglePlan(id, v) { if (await write(() => sb.from('plans').update({ done: v }).eq('id', id))) load(); else render(); }
 async function delPlan(id) { if (await write(() => sb.from('plans').delete().eq('id', id))) load(); }
 
-// ---------- Bấm giờ (đồng hồ lưu trên máy, sống sót cả khi đóng app) ----------
-function startTimer() {
-  const t = $('#tt').value.trim(); if (!t) return toast('Nhập tên công việc.');
-  localStorage.setItem('timer', JSON.stringify({ title: t, kind: $('#tk').value, start: Date.now() })); render();
-}
-async function stopTimer() {
-  const t = timer(); if (!t) return;
-  const minutes = Math.max(1, Math.round((Date.now() - t.start) / 6e4));
-  let income = null;
-  if (t.kind === 'side') income = Math.max(0, +prompt('Tiền nhận từ việc phụ này (VND)? Bỏ trống nếu chưa có.', '0') || 0);
-  const row = { kind: t.kind, title: t.title, minutes, income, work_date: new Date(t.start - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
-  // Chỉ xóa đồng hồ sau khi lưu thành công: mất mạng thì phiên bấm giờ vẫn còn, bấm "Dừng" lại sau.
-  if (await write(() => sb.from('entries').insert(row))) { localStorage.removeItem('timer'); toast('Đã lưu ' + hm(minutes) + '.'); load(); }
-}
-function clock() {
-  const t = timer(), el = $('#clk'); if (!t || !el) return;
-  const s = Math.floor((Date.now() - t.start) / 1000);
-  el.textContent = [s / 3600, s / 60 % 60, s % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':');
-}
-
 // ---------- Giao diện ----------
 const chip = k => `<span class="chip ${k}">${k === 'side' ? 'Phụ' : 'Chính'}</span>`;
-const addForm = kind => `<div class="row">
-  <label style="flex:2 1 200px">Công việc<input id="t${kind}" placeholder="${kind === 'side' ? 'VD: Thiết kế logo cho khách' : 'VD: Họp, viết báo cáo'}"></label>
-  <label>Ngày<input id="d${kind}" type="date" value="${today()}"></label>
-  <label>Số giờ<input id="h${kind}" type="number" inputmode="decimal" step="0.25" min="0" placeholder="1.5"></label>
-  ${kind === 'side' ? '<label>Tiền nhận (₫)<input id="i' + kind + '" type="number" inputmode="numeric" min="0" placeholder="200000"></label>' : ''}
-  <button class="b" onclick="add('${kind}')">Thêm</button></div>`;
+const addForm = kind => `<div class="form">
+  ${kind === 'side' ? '<label class="wide">Công việc<input id="tside" placeholder="VD: Thiết kế logo cho khách"></label>' : '<input id="tmain" type="hidden">'}
+  <label class="wide">Ngày<input id="d${kind}" type="date" value="${today()}"></label>
+  <label>Giờ vào<input id="in${kind}" type="time" oninput="preview('${kind}')"><button type="button" class="now" onclick="setNow('in${kind}','${kind}')">Bây giờ</button></label>
+  <label>Giờ ra<input id="out${kind}" type="time" oninput="preview('${kind}')"><button type="button" class="now" onclick="setNow('out${kind}','${kind}')">Bây giờ</button></label>
+  ${kind === 'side' ? '<label class="wide">Tiền nhận (₫)<input id="iside" type="number" inputmode="numeric" min="0" placeholder="200000"></label>' : ''}
+  <div class="wide act"><span class="pv" id="pv${kind}"></span><button class="b" onclick="add('${kind}')">Lưu</button></div></div>`;
 
 const entryRow = e => `<div class="li"><div>${chip(e.kind)}${esc(e.title)}<br><small>${e.work_date.slice(8)}/${e.work_date.slice(5, 7)} · ${hm(e.minutes)}${e.kind === 'side' ? ' · ' + vnd(e.income) : ' · ' + vnd(e.minutes / 60 * rate())}</small></div><button class="x" aria-label="Xóa ${esc(e.title)}" onclick="if(confirm('Xóa mục này?'))del('${e.id}')">×</button></div>`;
 
 function viewToday() {
-  const t = timer(), td = E.filter(e => e.work_date === today()), s = stats(td);
+  const td = E.filter(e => e.work_date === today()), s = stats(td);
   const tp = P.filter(p => p.plan_date === today());
-  return `<div class="card tint-y"><h2>Bấm giờ</h2>${t
-    ? `<div class="k">${esc(t.title)} (${t.kind === 'side' ? 'việc phụ' : 'việc chính'})</div><div class="clk" id="clk">00:00:00</div><br><button class="b stop" onclick="stopTimer()">Dừng và lưu</button>`
-    : `<div class="row"><label style="flex:2 1 200px">Đang làm gì?<input id="tt" placeholder="Tên công việc"></label>
-       <label>Loại<select id="tk"><option value="main">Việc chính</option><option value="side">Việc phụ</option></select></label>
-       <button class="b" onclick="startTimer()">Bắt đầu</button></div>`}</div>
-  <div class="card"><h2>Năng suất hôm nay</h2><div class="grid">
+  return `<div class="card tint-y"><h2>Chấm công việc chính</h2>${addForm('main')}</div>
+    <div class="card"><h2>Năng suất hôm nay</h2><div class="grid">
     <div><div class="k">Tổng thời gian</div><div class="v">${hm(s.mm + s.sm)}</div></div>
     <div><div class="k">Việc chính / phụ</div><div class="v">${hm(s.mm)} / ${hm(s.sm)}</div></div>
     <div><div class="k">Kiếm được hôm nay</div><div class="v money">${vnd(s.net + s.si)}</div></div>
     <div><div class="k">Năng suất (so với ${S.hours_per_day}g)</div><div class="v">${Math.round(s.prod)}%</div><div class="bar"><i style="width:${Math.min(100, s.prod)}%"></i></div></div>
     <div><div class="k">Kế hoạch đã xong</div><div class="v">${tp.filter(p => p.done).length}/${tp.length}</div></div></div></div>
-  <div class="card"><h2>Nhập tay giờ làm việc chính</h2>${addForm('main')}</div>
   <div class="card"><h2>Hôm nay đã làm</h2>${td.map(entryRow).join('') || empty('Chưa có gì. Bấm giờ hoặc nhập tay ở trên.')}</div>`;
 }
 function viewSide() {
@@ -309,17 +310,15 @@ const ICON = {
 function render() {
   const tabs = { today: ['Hôm nay', viewToday], side: ['Việc phụ', viewSide], plan: ['Kế hoạch', viewPlan], pay: ['Lương', viewPay] };
   const keep = document.activeElement?.id;
-  $('#app').innerHTML = `<header><div class="brand">${cat(timer() ? 'open' : 'happy')}<h1>Quỹ thời gian</h1></div>
+  $('#app').innerHTML = `<header><div class="brand">${cat('happy')}<h1>Quỹ thời gian</h1></div>
     <input type="month" value="${month}" style="width:auto" onchange="if(this.value){month=this.value;load()}" aria-label="Chọn tháng"></header>
     ${offline ? '<div class="banner">Đang ngoại tuyến: hiển thị dữ liệu đã lưu lần trước. Cần có mạng để thêm, sửa hoặc xóa.</div>' : ''}
     ${tabs[tab][1]()}
     <nav aria-label="Điều hướng"><div>${Object.entries(tabs).map(([k, v]) => `<button class="${k === tab ? 'on' : ''}" ${k === tab ? 'aria-current="page"' : ''} onclick="tab='${k}';render();scrollTo(0,0)"><span><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg></span>${v[0]}</button>`).join('')}</div></nav>`;
-  clock();
 }
 async function signOut() { if (confirm('Đăng xuất khỏi thiết bị này?')) await sb.auth.signOut(); }
 
 // ---------- Khởi động ----------
-setInterval(clock, 1000);
 addEventListener('online', () => user && load());
 addEventListener('offline', () => { offline = true; user && render(); });
 let lastUid;
