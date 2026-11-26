@@ -28,3 +28,9 @@ Không cần build: `index.html` + Supabase.
 - Việc phụ: tự nhập tiền nhận, không bị khấu trừ.
 - Tổng thực nhận = lương chính thực nhận + thu nhập việc phụ.
 - Năng suất ngày = (giờ chính + giờ phụ) ÷ giờ chuẩn mỗi ngày.
+
+## Giờ nghỉ và phụ cấp
+
+- **Giờ nghỉ**: nhập theo tiếng (0.5, 1, 1.25...) khi chấm công. Số giờ làm = (giờ ra − giờ vào) − giờ nghỉ, chỉ phần này được tính lương.
+- **Phụ cấp** (tab Lương): thêm nhiều khoản tùy ý, mỗi khoản một số tiền cho mỗi ngày. Cộng cho mỗi ngày có ghi giờ việc chính, không bị khấu trừ. Sửa trực tiếp tên hoặc số tiền trong danh sách. Phụ cấp lấy theo mức hiện tại, đổi mức sẽ áp dụng cho cả tháng đang xem.
+- Project Supabase đã chạy `schema.sql` bản cũ: chạy thêm `migration_002.sql`.

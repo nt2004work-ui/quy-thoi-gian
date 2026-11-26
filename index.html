@@ -65,6 +65,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 input[type=date],input[type=time],input[type=month]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;text-align:left;line-height:1.2}
 input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
 input::-webkit-calendar-picker-indicator{margin:0 0 0 4px;flex:none}
+.al{gap:6px}.al .aln{flex:2;min-width:0}.al .ala{flex:1;min-width:90px;text-align:right}
 header input[type=month]{width:auto;min-width:150px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .k{font-size:12px;color:var(--muted)}.v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -120,7 +121,7 @@ const vnd = n => Math.round(n || 0).toLocaleString('vi-VN') + ' ₫';
 const hm = m => Math.floor(m / 60) + 'g' + String(Math.round(m % 60)).padStart(2, '0');
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 
-let user, tab = 'today', month = today().slice(0, 7), E = [], P = [], offline = false;
+let user, tab = 'today', month = today().slice(0, 7), E = [], P = [], A = [], offline = false, noAllow = false;
 let S = { monthly_salary: 0, work_days: 22, hours_per_day: 8, deduction_pct: 10 };
 const rate = () => S.monthly_salary / (S.work_days * S.hours_per_day) || 0;
 localStorage.removeItem('timer'); // dọn phiên bấm giờ của bản cũ
@@ -158,11 +159,18 @@ function cat(mood = 'happy', fur = '#FFDE00', dark = '#E8A700') {
 }
 const empty = (msg, mood = 'sleep', fur, dark) => `<div class="empty">${cat(mood, fur, dark)}${msg}</div>`;
 
+// Tổng các khoản phụ cấp mỗi ngày (₫/ngày).
+const allowPerDay = () => A.reduce((t, a) => t + (+a.amount || 0), 0);
+// minutes đã là số phút THỰC LÀM (đã trừ giờ nghỉ). Phụ cấp tính cho mỗi ngày có ghi giờ việc chính, không bị khấu trừ.
 function stats(list) {
-  let mm = 0, sm = 0, si = 0;
-  list.forEach(e => e.kind === 'main' ? mm += e.minutes : (sm += e.minutes, si += +e.income || 0));
-  const gross = mm / 60 * rate(), net = gross * (1 - S.deduction_pct / 100);
-  return { mm, sm, si, gross, net, total: net + si, prod: (mm + sm) / (S.hours_per_day * 60) * 100 };
+  let mm = 0, sm = 0, si = 0, br = 0;
+  const days = new Set();
+  list.forEach(e => {
+    br += e.break_minutes || 0;
+    if (e.kind === 'main') { mm += e.minutes; days.add(e.work_date); } else { sm += e.minutes; si += +e.income || 0; }
+  });
+  const gross = mm / 60 * rate(), net = gross * (1 - S.deduction_pct / 100), allow = allowPerDay() * days.size;
+  return { mm, sm, si, br, days: days.size, gross, net, allow, total: net + si + allow, prod: (mm + sm) / (S.hours_per_day * 60) * 100 };
 }
 
 // ---------- Đăng nhập ----------
@@ -192,14 +200,16 @@ async function load() {
     const s = await sb.from('settings').select('*').maybeSingle();
     const e = await sb.from('entries').select('*').gte('work_date', a).lte('work_date', b).order('work_date', { ascending: false }).order('created_at', { ascending: false });
     const p = await sb.from('plans').select('*').gte('plan_date', a).lte('plan_date', b).order('plan_date');
+    const al = await sb.from('allowances').select('*').order('created_at');
     if (s.error || e.error || p.error) throw new Error((s.error || e.error || p.error).message);
+    noAllow = !!al.error; // bảng phụ cấp chưa tạo: app vẫn chạy, mục Phụ cấp báo cần chạy SQL
     if (s.data) S = s.data;
-    E = e.data || []; P = p.data || []; offline = false;
-    try { localStorage.setItem(cacheKey(), JSON.stringify({ S, E, P })); } catch (_) {}
+    E = e.data || []; P = p.data || []; A = al.data || []; offline = false;
+    try { localStorage.setItem(cacheKey(), JSON.stringify({ S, E, P, A })); } catch (_) {}
   } catch (err) {
     const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
     offline = true;
-    if (c) ({ S, E, P } = c); else { E = []; P = []; }
+    if (c) { ({ S, E, P } = c); A = c.A || []; } else { E = []; P = []; }
   }
   render();
 }
@@ -214,18 +224,40 @@ const toMin = v => { const p = String(v || '').split(':'); return p.length === 2
 const span = (a, b) => { const x = toMin(a), y = toMin(b); return isNaN(x) || isNaN(y) ? NaN : (y - x + 1440) % 1440; };
 function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function setNow(id, kind) { $('#' + id).value = nowHM(); preview(kind); }
+// Giờ nghỉ nhập theo tiếng (có thể lẻ: 0.5, 1.25) -> phút.
+const brkMin = kind => Math.round((+$('#brk' + kind).value || 0) * 60);
 function preview(kind) {
-  const m = span($('#in' + kind).value, $('#out' + kind).value), el = $('#pv' + kind);
-  if (el) el.textContent = m > 0 ? 'Làm ' + hm(m) + (kind === 'main' ? ' · ' + vnd(m / 60 * rate()) : '') : '';
+  const total = span($('#in' + kind).value, $('#out' + kind).value), b = brkMin(kind), m = total - b, el = $('#pv' + kind);
+  if (!el) return;
+  el.textContent = !(total > 0) ? '' : m > 0
+    ? 'Làm ' + hm(m) + (b ? ' (đã trừ nghỉ ' + hm(b) + ')' : '') + (kind === 'main' ? ' · ' + vnd(m / 60 * rate()) : '')
+    : 'Giờ nghỉ phải ngắn hơn ca làm';
 }
 async function add(kind) {
   const t = $('#t' + kind).value.trim() || (kind === 'main' ? 'Làm việc chính' : ''), d = $('#d' + kind).value;
-  const m = span($('#in' + kind).value, $('#out' + kind).value);
+  const total = span($('#in' + kind).value, $('#out' + kind).value), b = brkMin(kind), m = total - b;
   if (!t) return toast('Nhập tên công việc.');
-  if (!d || !(m > 0)) return toast('Nhập ngày, giờ vào và giờ ra.');
-  const row = { kind, title: t, work_date: d, minutes: m, income: kind === 'side' ? +$('#i' + kind).value || 0 : null };
-  if (await write(() => sb.from('entries').insert(row))) { toast('Đã lưu ' + hm(m) + '.'); load(); }
+  if (!d || !(total > 0)) return toast('Nhập ngày, giờ vào và giờ ra.');
+  if (b < 0) return toast('Giờ nghỉ không được âm.');
+  if (!(m > 0)) return toast('Giờ nghỉ phải ngắn hơn ca làm.');
+  const row = { kind, title: t, work_date: d, minutes: m, break_minutes: b, income: kind === 'side' ? +$('#i' + kind).value || 0 : null };
+  if (await write(() => sb.from('entries').insert(row))) {
+    if (kind === 'main') localStorage.setItem('lastBrk', $('#brk' + kind).value || '0'); // lần sau tự điền sẵn
+    toast('Đã lưu ' + hm(m) + (b ? ' (nghỉ ' + hm(b) + ')' : '') + '.'); load();
+  }
 }
+async function addAllow() {
+  const name = $('#an').value.trim(), amount = +$('#aa').value;
+  if (!name) return toast('Nhập tên khoản phụ cấp.');
+  if (!(amount >= 0) || $('#aa').value === '') return toast('Nhập số tiền mỗi ngày.');
+  if (await write(() => sb.from('allowances').insert({ name, amount }))) { toast('Đã thêm phụ cấp.'); load(); }
+}
+async function updAllow(id, field, v) {
+  const patch = field === 'name' ? { name: String(v).trim() } : { amount: +v };
+  if ((field === 'name' && !patch.name) || (field === 'amount' && !(patch.amount >= 0))) { toast('Giá trị không hợp lệ.'); return load(); }
+  if (await write(() => sb.from('allowances').update(patch).eq('id', id))) { toast('Đã cập nhật.'); load(); } else load();
+}
+async function delAllow(id) { if (await write(() => sb.from('allowances').delete().eq('id', id))) load(); }
 async function del(id) { if (await write(() => sb.from('entries').delete().eq('id', id))) load(); }
 async function addPlan() {
   const t = $('#pt').value.trim(); if (!t) return toast('Nhập việc cần làm.');
@@ -241,10 +273,11 @@ const addForm = kind => `<div class="form">
   <label class="wide">Ngày<input id="d${kind}" type="date" value="${today()}"></label>
   <label>Giờ vào<input id="in${kind}" type="time" oninput="preview('${kind}')"><button type="button" class="now" onclick="setNow('in${kind}','${kind}')">Bây giờ</button></label>
   <label>Giờ ra<input id="out${kind}" type="time" oninput="preview('${kind}')"><button type="button" class="now" onclick="setNow('out${kind}','${kind}')">Bây giờ</button></label>
+  <label class="wide">Giờ nghỉ trong ca (tiếng, không tính lương)<input id="brk${kind}" type="number" inputmode="decimal" step="0.25" min="0" placeholder="VD: 1 hoặc 0.5" value="${kind === 'main' ? (localStorage.getItem('lastBrk') || '') : ''}" oninput="preview('${kind}')"></label>
   ${kind === 'side' ? '<label class="wide">Tiền nhận (₫)<input id="iside" type="number" inputmode="numeric" min="0" placeholder="200000"></label>' : ''}
   <div class="wide act"><span class="pv" id="pv${kind}"></span><button class="b" onclick="add('${kind}')">Lưu</button></div></div>`;
 
-const entryRow = e => `<div class="li"><div>${chip(e.kind)}${esc(e.title)}<br><small>${e.work_date.slice(8)}/${e.work_date.slice(5, 7)} · ${hm(e.minutes)}${e.kind === 'side' ? ' · ' + vnd(e.income) : ' · ' + vnd(e.minutes / 60 * rate())}</small></div><button class="x" aria-label="Xóa ${esc(e.title)}" onclick="if(confirm('Xóa mục này?'))del('${e.id}')">×</button></div>`;
+const entryRow = e => `<div class="li"><div>${chip(e.kind)}${esc(e.title)}<br><small>${e.work_date.slice(8)}/${e.work_date.slice(5, 7)} · ${hm(e.minutes)}${e.break_minutes ? ' (nghỉ ' + hm(e.break_minutes) + ')' : ''}${e.kind === 'side' ? ' · ' + vnd(e.income) : ' · ' + vnd(e.minutes / 60 * rate())}</small></div><button class="x" aria-label="Xóa ${esc(e.title)}" onclick="if(confirm('Xóa mục này?'))del('${e.id}')">×</button></div>`;
 
 function viewToday() {
   const td = E.filter(e => e.work_date === today()), s = stats(td);
@@ -253,10 +286,10 @@ function viewToday() {
     <div class="card"><h2>Năng suất hôm nay</h2><div class="grid">
     <div><div class="k">Tổng thời gian</div><div class="v">${hm(s.mm + s.sm)}</div></div>
     <div><div class="k">Việc chính / phụ</div><div class="v">${hm(s.mm)} / ${hm(s.sm)}</div></div>
-    <div><div class="k">Kiếm được hôm nay</div><div class="v money">${vnd(s.net + s.si)}</div></div>
+    <div><div class="k">Kiếm được hôm nay</div><div class="v money">${vnd(s.total)}</div></div>
     <div><div class="k">Năng suất (so với ${S.hours_per_day}g)</div><div class="v">${Math.round(s.prod)}%</div><div class="bar"><i style="width:${Math.min(100, s.prod)}%"></i></div></div>
     <div><div class="k">Kế hoạch đã xong</div><div class="v">${tp.filter(p => p.done).length}/${tp.length}</div></div></div></div>
-  <div class="card"><h2>Hôm nay đã làm</h2>${td.map(entryRow).join('') || empty('Chưa có gì. Bấm giờ hoặc nhập tay ở trên.')}</div>`;
+  <div class="card"><h2>Hôm nay đã làm</h2>${td.map(entryRow).join('') || empty('Chưa có gì. Nhập giờ vào và giờ ra ở trên.')}</div>`;
 }
 function viewSide() {
   const l = E.filter(e => e.kind === 'side'), s = stats(E);
@@ -291,11 +324,21 @@ function viewPay() {
     <label>Khấu trừ lương chính (%)<input id="dp" type="number" inputmode="decimal" min="0" max="100" value="${S.deduction_pct}"></label>
     <button class="b" onclick="saveS()">Lưu</button></div><br>
     <div class="k">Mỗi giờ làm việc chính được</div><div class="v money big">${vnd(rate())}</div></div>
-  <div class="card"><h2>Thực nhận tháng ${month.slice(5)}/${month.slice(0, 4)} (cộng tất cả giờ làm)</h2><div class="grid">
+  <div class="card tint-p"><h2>Phụ cấp (tính theo ngày)</h2>${noAllow
+    ? '<div class="banner">Chưa có bảng phụ cấp trên Supabase. Chạy file <b>migration_002.sql</b> trong SQL Editor rồi tải lại trang.</div>'
+    : `<p class="k" style="margin:0 0 8px">Mỗi khoản được cộng cho từng ngày có ghi giờ việc chính, không bị khấu trừ. Tháng này có <b>${s.days}</b> ngày đi làm.</p>
+    ${A.map(a => `<div class="li al"><input class="aln" value="${esc(a.name)}" aria-label="Tên phụ cấp" onchange="updAllow('${a.id}','name',this.value)"><input class="ala" type="number" inputmode="numeric" min="0" value="${a.amount}" aria-label="Số tiền mỗi ngày của ${esc(a.name)}" onchange="updAllow('${a.id}','amount',this.value)"><span class="k">₫/ngày</span><button class="x" aria-label="Xóa ${esc(a.name)}" onclick="if(confirm('Xóa khoản này?'))delAllow('${a.id}')">×</button></div>`).join('') || '<div class="empty" style="padding:2px 0 10px">Chưa có khoản nào. Ví dụ: tiền cơm, xăng xe, chuyên cần.</div>'}
+    <div class="row" style="margin-top:8px"><label style="flex:2 1 150px">Tên khoản<input id="an" placeholder="VD: Tiền cơm"></label>
+    <label>Số tiền mỗi ngày (₫)<input id="aa" type="number" inputmode="numeric" min="0" placeholder="30000"></label>
+    <button class="b" onclick="addAllow()">Thêm</button></div>
+    ${A.length ? `<div class="k" style="margin-top:10px">Cộng ${vnd(allowPerDay())}/ngày × ${s.days} ngày = <b>${vnd(s.allow)}</b></div>` : ''}`}</div>
+  <div class="card"><h2>Thực nhận tháng ${month.slice(5)}/${month.slice(0, 4)} (đã trừ giờ nghỉ, cộng phụ cấp)</h2><div class="grid">
     <div><div class="k">Giờ việc chính</div><div class="v">${hm(s.mm)}</div></div>
     <div><div class="k">Lương chính (trước khấu trừ)</div><div class="v">${vnd(s.gross)}</div></div>
     <div><div class="k">Lương chính thực nhận</div><div class="v">${vnd(s.net)}</div></div>
-    <div><div class="k">Thu nhập việc phụ</div><div class="v">${vnd(s.si)}</div></div></div><br>
+    <div><div class="k">Thu nhập việc phụ</div><div class="v">${vnd(s.si)}</div></div>
+    <div><div class="k">Phụ cấp (${s.days} ngày)</div><div class="v">${vnd(s.allow)}</div></div>
+    <div><div class="k">Tổng giờ nghỉ (không tính lương)</div><div class="v">${hm(s.br)}</div></div></div><br>
     <div class="k">Tổng thực nhận</div><div class="v money big">${vnd(s.total)}</div>
     <div class="k">Tổng ${hm(s.mm + s.sm)} giờ · bình quân ${s.mm + s.sm ? vnd(s.total / ((s.mm + s.sm) / 60)) : '–'}/giờ</div></div>
   <div class="card tbl"><h2>Năng suất từng ngày</h2><table><tr><th>Ngày</th><th>Giờ làm</th><th>Thu nhập</th><th>Năng suất</th><th>Kế hoạch</th></tr>${rows || '<tr><td colspan="5" class="empty">Chưa có dữ liệu.</td></tr>'}</table></div>
