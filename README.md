@@ -40,3 +40,4 @@ Không cần build: `index.html` + Supabase.
 - Bảng kiểu trang tính cho từng ngày: ✓ · Giờ · Việc cần làm · các cột tự thêm (Ghi chú, Địa điểm...). Gõ thẳng vào ô để sửa, kéo ngang nếu nhiều cột.
 - "+ Thêm cột" tạo cột mới dùng cho mọi ngày; đổi tên bằng cách gõ vào tiêu đề cột, xóa bằng dấu ×.
 - Nếu Supabase chưa chạy `cap_nhat.sql`, app vẫn lưu được việc và ca làm nhưng ẩn cột giờ, cột tùy chỉnh và hiện nhắc chạy SQL.
+- Nút "Cả tháng" trong tab Lịch: lịch tháng tô màu theo tiến độ từng ngày (xanh lá xong hết, vàng đang làm, hồng chưa làm, chấm xanh là ngày đã chấm công) và danh sách việc cả tháng, giờ tô màu theo buổi. Bấm vào một ngày để mở bảng của ngày đó.

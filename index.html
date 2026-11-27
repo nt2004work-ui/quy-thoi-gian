@@ -65,6 +65,39 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 input[type=date],input[type=time],input[type=month]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;text-align:left;line-height:1.2}
 input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value{text-align:left;min-height:1.2em}
 input::-webkit-calendar-picker-indicator{margin:0 0 0 4px;flex:none}
+.seg{display:flex;background:#fff;border:1.5px solid var(--border-strong);border-radius:9999px;padding:4px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:none;border-radius:9999px;min-height:40px;font-weight:500;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--blue-strong);color:#fff;font-weight:700}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.ring{--p:0;width:64px;height:64px;flex:none;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--green) calc(var(--p)*1%),var(--border) 0)}
+.ring b{width:48px;height:48px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:13px;color:var(--green-ink)}
+.cal-w,.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.cal-w{margin-bottom:6px}.cal-w span{text-align:center;font-size:12px;font-weight:700;color:var(--blue-ink)}.cal-w span.we{color:var(--pink-ink)}
+.cal-d{position:relative;aspect-ratio:1/1.12;min-width:0;border:1.5px solid var(--border);border-radius:12px;background:#fff;padding:4px 2px 5px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;color:var(--ink)}
+.cal-d b{font-size:14px}.cal-d.we b{color:var(--pink-ink)}
+.cal-d span{font-size:10px;font-weight:700;line-height:1}
+.cal-d em{display:block;width:78%;height:4px;border-radius:9px;background:rgb(20 40 75/.12);overflow:hidden}.cal-d em i{display:block;height:100%;background:currentColor;border-radius:9px}
+.cal-d u{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.cal-d.all{background:var(--green-tint);border-color:#A9D6BE;color:var(--green-ink)}
+.cal-d.some{background:var(--yellow-tint);border-color:#F0DC6A;color:var(--yellow-ink)}
+.cal-d.todo{background:var(--pink-tint);border-color:var(--pink-light);color:var(--pink-ink)}
+.cal-d.all b,.cal-d.some b,.cal-d.todo b{color:var(--ink)}
+.cal-d.now{border-color:var(--blue-strong);box-shadow:0 0 0 2px var(--blue-strong)}
+.cal-d:active{transform:scale(.94)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}.legend i{width:12px;height:12px;border-radius:4px;display:block}
+.legend .all{background:var(--green-tint);border:1.5px solid #A9D6BE}.legend .some{background:var(--yellow-tint);border:1.5px solid #F0DC6A}.legend .todo{background:var(--pink-tint);border:1.5px solid var(--pink-light)}
+.legend .dot{background:var(--blue);border-radius:50%;width:8px;height:8px}
+.legend .am{background:var(--yellow)}.legend .pm{background:var(--blue)}.legend .eve{background:var(--pink)}
+.ag-day{border-top:1px solid var(--border);padding:8px 0}.ag-day:first-of-type{border-top:0;padding-top:0}
+.ag-h{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:6px 0;min-height:40px;font-weight:700;font-size:14px;color:var(--blue-ink);cursor:pointer;text-align:left}
+.ag-h small{font-weight:500;color:var(--muted)}
+.ag-i{display:flex;align-items:center;gap:10px;padding:5px 0}.ag-i.done{text-decoration:none;color:inherit}.ag-i .tm{text-decoration:none}
+.ag-i .tt{flex:1;min-width:0;overflow-wrap:anywhere}.ag-i.done .tt{text-decoration:line-through;color:var(--muted)}
+.ag-i .ok{color:var(--green-ink);font-weight:700}
+.tm{flex:none;min-width:54px;text-align:center;font-size:12px;font-weight:700;border-radius:9999px;padding:3px 8px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tm.am{background:var(--yellow)}.tm.pm{background:var(--blue-tint);color:var(--blue-ink)}.tm.eve{background:var(--pink-tint);color:var(--pink-ink)}.tm.none{background:#EEF0F4;color:var(--muted)}
+.sheet tr.p-am td:first-child{box-shadow:inset 4px 0 var(--yellow)}.sheet tr.p-pm td:first-child{box-shadow:inset 4px 0 var(--blue)}.sheet tr.p-eve td:first-child{box-shadow:inset 4px 0 var(--pink)}
 .daynav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.daynav input{flex:1;min-width:140px;width:auto}.daynav .b{padding:10px 14px}
 .sheetcard{padding:12px}
 .sheet{border-collapse:collapse;width:100%;font-size:15px}
@@ -138,7 +171,7 @@ const vnd = n => Math.round(n || 0).toLocaleString('vi-VN') + ' ₫';
 const hm = m => Math.floor(m / 60) + 'g' + String(Math.round(m % 60)).padStart(2, '0');
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 
-let user, tab = 'today', month = today().slice(0, 7), E = [], P = [], A = [], offline = false, noAllow = false, needMig = false, day = today();
+let user, tab = 'today', month = today().slice(0, 7), E = [], P = [], A = [], offline = false, noAllow = false, needMig = false, day = today(), planView = 'day';
 let S = { monthly_salary: 0, work_days: 22, hours_per_day: 8, deduction_pct: 10 };
 const rate = () => S.monthly_salary / (S.work_days * S.hours_per_day) || 0;
 localStorage.removeItem('timer'); // dọn phiên bấm giờ của bản cũ
@@ -288,7 +321,7 @@ const cols = () => Array.isArray(S.plan_cols) ? S.plan_cols : [];
 const dayPlans = () => P.filter(p => p.plan_date === day).sort((a, b) => (a.at_time || '99') < (b.at_time || '99') ? -1 : (a.at_time || '99') > (b.at_time || '99') ? 1 : 0);
 function setDay(d) {
   if (!d) return;
-  day = d;
+  day = d; planView = 'day';
   if (d.slice(0, 7) !== month) { month = d.slice(0, 7); load(); } else render();
 }
 function shiftDay(n) { const d = new Date(day + 'T12:00:00'); d.setDate(d.getDate() + n); setDay(d.toISOString().slice(0, 10)); }
@@ -366,11 +399,37 @@ function viewSide() {
 }
 const MIG = '<div class="banner">Supabase chưa được cập nhật: chạy file <b>cap_nhat.sql</b> trong SQL Editor rồi tải lại trang để dùng đủ giờ, cột tùy chỉnh, giờ nghỉ và phụ cấp.</div>';
 const WD = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+// Màu theo buổi: sáng vàng, chiều xanh dương, tối hồng, chưa đặt giờ xám.
+const part = t => !t ? 'none' : t < '12:00' ? 'am' : t < '18:00' ? 'pm' : 'eve';
+const seg = () => `<div class="seg" role="tablist"><button role="tab" aria-selected="${planView === 'day'}" class="${planView === 'day' ? 'on' : ''}" onclick="planView='day';render()">Theo ngày</button><button role="tab" aria-selected="${planView === 'month'}" class="${planView === 'month' ? 'on' : ''}" onclick="planView='month';render()">Cả tháng</button></div>`;
+function viewMonth() {
+  const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate(), lead = (new Date(y, m - 1, 1).getDay() + 6) % 7; // tuần bắt đầu từ thứ hai
+  const byDay = {}; P.forEach(p => (byDay[p.plan_date] ||= []).push(p));
+  const worked = new Set(E.filter(e => e.kind === 'main').map(e => e.work_date));
+  const done = P.filter(p => p.done).length, pct = P.length ? Math.round(done / P.length * 100) : 0;
+  let cells = '<i></i>'.repeat(lead);
+  for (let i = 1; i <= n; i++) {
+    const d = month + '-' + String(i).padStart(2, '0'), l = byDay[d] || [], k = l.filter(p => p.done).length, wd = (lead + i - 1) % 7;
+    const st = !l.length ? 'none' : k === l.length ? 'all' : k ? 'some' : 'todo';
+    cells += `<button class="cal-d ${st} ${d === today() ? 'now' : ''} ${wd > 4 ? 'we' : ''}" onclick="setDay('${d}')" aria-label="Ngày ${i}/${m}${l.length ? ', xong ' + k + ' trên ' + l.length + ' việc' : ', chưa có lịch'}${worked.has(d) ? ', đã chấm công' : ''}">
+      <b>${i}</b>${worked.has(d) ? '<u title="Đã chấm công"></u>' : ''}${l.length ? `<span>${k}/${l.length}</span><em><i style="width:${k / l.length * 100}%"></i></em>` : ''}</button>`;
+  }
+  const agenda = Object.keys(byDay).sort().map(d => { const dd = new Date(d + 'T12:00:00');
+    return `<div class="ag-day"><button class="ag-h" onclick="setDay('${d}')">${WD[dd.getDay()]} ${d.slice(8)}/${d.slice(5, 7)}<small>${byDay[d].filter(p => p.done).length}/${byDay[d].length} xong ›</small></button>
+      ${byDay[d].slice().sort((a, b) => (a.at_time || '99') < (b.at_time || '99') ? -1 : 1).map(p => `<div class="ag-i ${p.done ? 'done' : ''}"><span class="tm ${part(p.at_time)}">${p.at_time ? esc(p.at_time.slice(0, 5)) : '—'}</span><span class="tt">${esc(p.title)}</span>${p.done ? '<span class="ok">✓</span>' : ''}</div>`).join('')}</div>`; }).join('');
+  return `${seg()}<div class="card"><div class="mhead"><div><h2 style="margin:0">Tháng ${m}/${y}</h2><div class="k">${P.length ? 'Xong ' + done + '/' + P.length + ' việc' : 'Chưa có việc nào'} · ${worked.size} ngày chấm công</div></div>
+      <div class="ring" style="--p:${pct}"><b>${pct}%</b></div></div>
+    <div class="cal"><div class="cal-w">${['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((x, i) => `<span class="${i > 4 ? 'we' : ''}">${x}</span>`).join('')}</div><div class="cal-g">${cells}</div></div>
+    <div class="legend"><span><i class="all"></i>Xong hết</span><span><i class="some"></i>Đang làm</span><span><i class="todo"></i>Chưa làm</span><span><i class="dot"></i>Đã chấm công</span></div></div>
+  <div class="card"><h2>Việc trong tháng</h2>${agenda || empty('Tháng này chưa có lịch. Bấm vào một ngày ở trên để thêm việc.', 'sleep', '#188FE4', '#0F70BA')}
+    ${agenda ? '<div class="legend" style="margin-top:12px"><span><i class="am"></i>Sáng</span><span><i class="pm"></i>Chiều</span><span><i class="eve"></i>Tối</span></div>' : ''}</div>`;
+}
 function viewPlan() {
+  if (planView === 'month') return viewMonth();
   const list = dayPlans(), cs = needMig ? [] : cols(), d = P.filter(p => p.done).length;
   const days = [...new Set(P.map(p => p.plan_date))].sort();
   const dd = new Date(day + 'T12:00:00');
-  return `<div class="card"><h2>Lịch ngày · ${WD[dd.getDay()]} ${day.slice(8)}/${day.slice(5, 7)}</h2>
+  return `${seg()}<div class="card"><h2>Lịch ngày · ${WD[dd.getDay()]} ${day.slice(8)}/${day.slice(5, 7)}</h2>
     <div class="daynav"><button class="b g" aria-label="Ngày trước" onclick="shiftDay(-1)">◀</button>
     <input type="date" value="${day}" aria-label="Chọn ngày" onchange="setDay(this.value)">
     <button class="b g" aria-label="Ngày sau" onclick="shiftDay(1)">▶</button>
@@ -378,7 +437,7 @@ function viewPlan() {
   ${needMig ? MIG : ''}
   <div class="card sheetcard"><div class="tbl"><table class="sheet"><thead><tr><th class="c-k">✓</th>${needMig ? '' : '<th class="c-t">Giờ</th>'}<th class="c-n">Việc cần làm</th>${cs.map(c =>
       `<th class="c-x"><div class="colh"><input value="${esc(c.name)}" aria-label="Tên cột" onchange="renameCol('${c.id}',this.value)"><button class="x" aria-label="Xóa cột ${esc(c.name)}" onclick="delCol('${c.id}')">×</button></div></th>`).join('')}<th class="c-k"></th></tr></thead><tbody>
-    ${list.map(p => `<tr class="${p.done ? 'isdone' : ''}"><td class="c-k"><input type="checkbox" aria-label="Xong: ${esc(p.title)}" ${p.done ? 'checked' : ''} onchange="togglePlan('${p.id}',this.checked)"></td>
+    ${list.map(p => `<tr class="${p.done ? 'isdone' : ''} p-${part(p.at_time)}"><td class="c-k"><input type="checkbox" aria-label="Xong: ${esc(p.title)}" ${p.done ? 'checked' : ''} onchange="togglePlan('${p.id}',this.checked)"></td>
       ${needMig ? '' : `<td><input type="time" value="${esc((p.at_time || '').slice(0, 5))}" aria-label="Giờ" onchange="updPlan('${p.id}','at_time',this.value)"></td>`}
       <td><input value="${esc(p.title)}" aria-label="Việc cần làm" onchange="updPlan('${p.id}','title',this.value)"></td>
       ${cs.map(c => `<td><input value="${esc((p.extra || {})[c.id] || '')}" aria-label="${esc(c.name)}" onchange="updPlan('${p.id}','${c.id}',this.value)"></td>`).join('')}
